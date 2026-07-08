@@ -109,8 +109,18 @@ public partial class App : Application
 
         // Editable seed-site list (created with defaults on first run).
         var reference = new ReferenceLibrary(ReferenceConfig.LoadOrCreate(referencePath));
-        return new D2Brain(service, new BrainOptions { ApiKey = apiKey, Effort = settings.Effort }, reference);
+        return new D2Brain(service, new BrainOptions { ApiKey = apiKey, Effort = settings.Effort }, reference,
+            CaptureClipboardImage);
     }
+
+    /// <summary>Claude's on-demand eyes (the view_screenshot tool): the clipboard image,
+    /// JPEG-encoded for the vision API. Marshals to the dispatcher because the clipboard
+    /// is UI-thread-only and the tool loop may resume elsewhere.</summary>
+    private static CapturedImage? CaptureClipboardImage() =>
+        Current.Dispatcher.Invoke(() =>
+            Clipboard.ContainsImage() && Clipboard.GetImage() is { } image
+                ? new CapturedImage(ScreenshotEncoder.ToJpeg(image), "image/jpeg")
+                : null);
 
     private static VoiceStack? TryCreateVoice(IConfiguration config, AppSettings settings)
     {

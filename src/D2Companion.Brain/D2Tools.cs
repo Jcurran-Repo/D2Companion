@@ -143,6 +143,12 @@ public static class D2Tools
             props: [("cause", StringProp("What killed them, e.g. \"Fire Enchanted boss pack in the Pit\"."))],
             required: ["cause"]),
 
+        Tool("view_screenshot",
+            "Look at the player's screen: fetches the screenshot they just took (the image on " +
+            "their clipboard) so you can see it. Call this when the player says they've taken a " +
+            "screenshot or asks you to look at something — read the scene, the stats, the item text.",
+            props: [], required: []),
+
         Tool("lookup_reference",
             "Look up a D2 topic in the configured reference sites to orient or verify a decision. " +
             "Use sparingly — rely on your own knowledge first; only look up when a call should be " +
@@ -225,6 +231,11 @@ public static class D2Tools
                 // Reached only when no ReferenceLibrary is wired; the brain otherwise handles this async.
                 return "No reference sites are configured — rely on your own D2 knowledge.";
 
+            case "view_screenshot":
+                // Reached only when no screenshot source is wired (e.g. the harness); the brain
+                // otherwise answers with the clipboard image itself.
+                return "No screenshot access in this session — ask the player to describe what they see.";
+
             default:
                 return $"Unknown tool '{name}'.";
         }
@@ -239,7 +250,8 @@ public static class D2Tools
         foreach (var (key, schema) in props)
             properties[key] = schema;
         // Every mutation tool also accepts an optional rationale, logged with the change.
-        if (name != "get_character_state")
+        // The read-only tools don't record anything, so they don't take one.
+        if (name is not ("get_character_state" or "view_screenshot"))
             properties["rationale"] = Rationale;
 
         return new Tool

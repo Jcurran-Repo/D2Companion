@@ -35,10 +35,10 @@ public sealed class D2ToolsTests
     [Fact]
     public void MutationTools_ExposeRationale()
     {
-        // Every tool except get_character_state should carry the (previously broken) rationale.
+        // Every tool except the read-only ones should carry the (previously broken) rationale.
         foreach (var tool in D2Tools.Definitions)
         {
-            if (tool.Name == "get_character_state") continue;
+            if (tool.Name is "get_character_state" or "view_screenshot") continue;
             var properties = tool.InputSchema?.Properties;
             Assert.NotNull(properties);
             Assert.True(properties!.ContainsKey("rationale"),

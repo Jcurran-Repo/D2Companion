@@ -48,6 +48,50 @@ public sealed class ScreenshotTests
         Assert.Equal(480, decoded.PixelHeight);
     }
 
+    [Fact]
+    public void ViewScreenshotTool_IsDefined_WithoutRationale()
+    {
+        var tool = Assert.Single(D2Tools.Definitions, t => t.Name == "view_screenshot");
+        Assert.False(tool.InputSchema?.Properties?.ContainsKey("rationale") ?? false,
+            "view_screenshot is read-only and shouldn't take a rationale.");
+    }
+
+    [Fact]
+    public void BuildScreenshotResult_WithNoImage_ExplainsTheEmptyClipboard()
+    {
+        var content = D2Brain.BuildScreenshotResult(null);
+
+        Assert.True(content.TryPickString(out var message));
+        Assert.Contains("clipboard", message, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void BuildScreenshotResult_WithImage_ReturnsImageThenTextBlocks()
+    {
+        var bytes = new byte[] { 9, 8, 7 };
+
+        var content = D2Brain.BuildScreenshotResult(new CapturedImage(bytes, "image/jpeg"));
+
+        Assert.True(content.TryPickBlocks(out var blocks));
+        Assert.Equal(2, blocks!.Count);
+        var imageJson = JsonSerializer.Serialize(blocks[0]);
+        Assert.Contains("image/jpeg", imageJson);
+        Assert.Contains(Convert.ToBase64String(bytes), imageJson);
+    }
+
+    [Fact]
+    public void ViewScreenshot_WithoutSource_FallsBackToAskingThePlayer()
+    {
+        var service = new D2Companion.Core.CharacterService(
+            new D2Companion.Core.Persistence.SqliteCharacterStore(
+                Path.Combine(Path.GetTempPath(), $"d2c-{Guid.NewGuid():N}.db")));
+
+        var result = D2Tools.Execute(service, "view_screenshot",
+            new Dictionary<string, JsonElement>());
+
+        Assert.Contains("describe", result);
+    }
+
     private static BitmapSource SolidBitmap(int width, int height)
     {
         var stride = width * 4;

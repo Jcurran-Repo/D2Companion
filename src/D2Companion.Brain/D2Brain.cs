@@ -22,12 +22,15 @@ public sealed class D2Brain
     private readonly List<ToolUnion> _tools = new();
     private readonly Effort _effort;
     private readonly ReferenceLibrary? _reference;
+    private readonly Func<CapturedImage?>? _screenshotSource;
 
-    public D2Brain(CharacterService service, BrainOptions options, ReferenceLibrary? reference = null)
+    public D2Brain(CharacterService service, BrainOptions options, ReferenceLibrary? reference = null,
+        Func<CapturedImage?>? screenshotSource = null)
     {
         _service = service ?? throw new ArgumentNullException(nameof(service));
         _options = options ?? throw new ArgumentNullException(nameof(options));
         _reference = reference;
+        _screenshotSource = screenshotSource;
         _client = new AnthropicClient { ApiKey = options.ApiKey };
 
         foreach (var tool in D2Tools.Definitions)
@@ -63,6 +66,28 @@ public sealed class D2Brain
             Role = Role.User,
             Content = BuildImageContent(playerText, imageBytes, imageMediaType),
         });
+
+    /// <summary>Builds the tool_result content for view_screenshot: the clipboard image when
+    /// there is one, or a nudge to take a screenshot when there isn't. Public for tests.</summary>
+    public static ToolResultBlockParamContent BuildScreenshotResult(CapturedImage? capture)
+    {
+        if (capture is null)
+            return "No screenshot found — the clipboard has no image. Ask the player to hit " +
+                   "PrtScn (or Win+Shift+S) and say the word again.";
+
+        return new List<Block>
+        {
+            new ImageBlockParam
+            {
+                Source = new Base64ImageSource
+                {
+                    Data = Convert.ToBase64String(capture.Data),
+                    MediaType = capture.MediaType,
+                },
+            },
+            new TextBlockParam { Text = "The player's screenshot, fresh off their clipboard." },
+        };
+    }
 
     /// <summary>Builds the image-plus-text content for a screenshot turn (image first, per
     /// the vision guidance). Public so the payload shape stays testable without an API call.</summary>
@@ -114,6 +139,17 @@ public sealed class D2Brain
             var toolResults = new List<ContentBlockParam>();
             foreach (var toolUse in toolUses)
             {
+                // view_screenshot returns image content, not a string — handle it here.
+                if (toolUse.Name == "view_screenshot" && _screenshotSource is not null)
+                {
+                    toolResults.Add(new ToolResultBlockParam
+                    {
+                        ToolUseID = toolUse.ID,
+                        Content = BuildScreenshotResult(_screenshotSource()),
+                    });
+                    continue;
+                }
+
                 // lookup_reference is the one async tool (it fetches web pages); everything
                 // else is a synchronous state mutation through the service.
                 var result = toolUse.Name == "lookup_reference" && _reference is not null

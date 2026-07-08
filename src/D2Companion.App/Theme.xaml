@@ -418,6 +418,22 @@
         </Style.Triggers>
     </Style>
 
+    <!-- ProgressBar: dark track, gold fill (used by the mic tuning meter) -->
+    <Style TargetType="ProgressBar">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ProgressBar">
+                    <Grid>
+                        <Border x:Name="PART_Track" Background="{StaticResource D2.ListBgBrush}"
+                                BorderBrush="{StaticResource D2.BorderDimBrush}" BorderThickness="1" CornerRadius="2"/>
+                        <Border x:Name="PART_Indicator" Background="{StaticResource D2.GoldBrush}"
+                                HorizontalAlignment="Left" CornerRadius="2" Margin="1"/>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Tooltips: black box with gold rim, like an item hover -->
     <Style TargetType="ToolTip">
         <Setter Property="Background" Value="#0A0805"/>

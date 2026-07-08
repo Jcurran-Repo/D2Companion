@@ -92,7 +92,7 @@ public sealed class OpenMicListener : IDisposable
             var frame = new byte[e.BytesRecorded];
             Array.Copy(e.Buffer, frame, e.BytesRecorded);
 
-            switch (_vad.Feed(FrameEnergy(frame)))
+            switch (_vad.Feed(FrameEnergy.Of(frame)))
             {
                 case VadSignal.SpeechStarted:
                     _utterance = new MemoryStream();
@@ -148,19 +148,6 @@ public sealed class OpenMicListener : IDisposable
         using (var writer = new WaveFileWriter(wav, _format))
             writer.Write(pcm, 0, pcm.Length);
         return wav.ToArray(); // ToArray works on the closed stream
-    }
-
-    private static double FrameEnergy(byte[] buffer)
-    {
-        if (buffer.Length < 2) return 0;
-        long sum = 0;
-        var samples = buffer.Length / 2;
-        for (var i = 0; i + 1 < buffer.Length; i += 2)
-        {
-            var sample = (short)(buffer[i] | (buffer[i + 1] << 8));
-            sum += Math.Abs((int)sample);
-        }
-        return (double)sum / samples;
     }
 
     public void Dispose() => Stop();

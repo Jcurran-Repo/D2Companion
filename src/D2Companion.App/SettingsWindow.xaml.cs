@@ -14,6 +14,8 @@ public partial class SettingsWindow : Window
         TitleBarTheme.Apply(this);
         _viewModel = new SettingsViewModel(settings, settingsPath, referencePath);
         DataContext = _viewModel;
+        // Release the mic if the window closes mid-tuning (Save, Cancel, or X).
+        Closed += (_, _) => _viewModel.StopTuning();
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)

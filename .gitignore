@@ -1,0 +1,16 @@
+# Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+.vs/
+
+# Local SQLite database (created at runtime under %LocalAppData%; harness writes one under bin/)
+*.db
+*.db-shm
+*.db-wal
+
+# Secrets — Phase 1 keys live in dotnet user-secrets; this is the fallback repo file-drop
+secrets.local.json
+appsettings.local.json

@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/D2Companion.App/D2Companion.App.csproj" />
+    <Project Path="src/D2Companion.Brain/D2Companion.Brain.csproj" />
+    <Project Path="src/D2Companion.Core/D2Companion.Core.csproj" />
+    <Project Path="src/D2Companion.Harness/D2Companion.Harness.csproj" />
+    <Project Path="src/D2Companion.Voice/D2Companion.Voice.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/D2Companion.Tests/D2Companion.Tests.csproj" />
+  </Folder>
+</Solution>

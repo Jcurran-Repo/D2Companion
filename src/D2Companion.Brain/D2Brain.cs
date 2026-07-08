@@ -182,12 +182,16 @@ public sealed class D2Brain
         return "(I took too many bookkeeping steps on that one — ask me again.)";
     }
 
-    private MessageCreateParams BuildParams() => new()
+    internal MessageCreateParams BuildParams() => new()
     {
         Model = _options.Model,
         MaxTokens = _options.MaxTokens,
-        // System prompt is stable, so cache it — each turn then only pays for the new
-        // message plus the reply. Tools render before system and cache along with it.
+        // Two cache breakpoints. The system one pins tools + system prompt (stable for the
+        // whole session). The top-level one auto-places on the newest message block, so each
+        // request re-reads the entire prior conversation at ~10% price instead of
+        // re-processing it at full rate — without it, turn N pays full price for all N-1
+        // earlier turns and the session cost curve goes quadratic.
+        CacheControl = new CacheControlEphemeral(),
         System = new List<TextBlockParam>
         {
             new() { Text = SystemPrompt.Text, CacheControl = new CacheControlEphemeral() },

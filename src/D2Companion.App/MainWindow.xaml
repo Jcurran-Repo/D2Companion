@@ -41,6 +41,8 @@
     <DockPanel>
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="6,6,6,0">
             <Button Content="New character" Command="{Binding NewCharacterCommand}"/>
+            <Button Content="New conversation" Command="{Binding NewConversationCommand}"
+                    ToolTip="Clears Claude's chat memory (faster + cheaper turns). Your character, ledger, runs, and deaths are all kept."/>
             <Button Content="Export…" Command="{Binding ExportCommand}"/>
             <Button Content="Import…" Command="{Binding ImportCommand}"/>
             <Button Content="Settings…" Command="{Binding OpenSettingsCommand}"/>

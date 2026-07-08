@@ -33,7 +33,10 @@ public partial class MainViewModel : ObservableObject
     // --- Voice / brain status ---
     [ObservableProperty] private string _voiceStatus = "";
     [ObservableProperty] private bool _isTalking;
-    [ObservableProperty][NotifyPropertyChangedFor(nameof(ScreenshotEnabled))] private bool _isBusy;
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ScreenshotEnabled))]
+    [NotifyCanExecuteChangedFor(nameof(NewConversationCommand))]
+    private bool _isBusy;
     [ObservableProperty][NotifyPropertyChangedFor(nameof(ListenButtonText))] private bool _isListening;
     [ObservableProperty] private string _lastHeard = "";
     [ObservableProperty] private string _lastReply = "";
@@ -162,6 +165,20 @@ public partial class MainViewModel : ObservableObject
         LastReply = "";
         VoiceStatus = "New character started.";
     }
+
+    /// <summary>Clears Claude's conversation memory mid-session — a cost and latency reset.
+    /// The character, ledger, runs, and deaths are untouched; Claude re-orients from the
+    /// recorded state on the next turn.</summary>
+    [RelayCommand(CanExecute = nameof(CanNewConversation))]
+    private void NewConversation()
+    {
+        _brain!.Reset();
+        LastHeard = "";
+        LastReply = "";
+        VoiceStatus = "Conversation cleared — your character is untouched. Claude re-reads the sheet on the next turn.";
+    }
+
+    private bool CanNewConversation() => _brain is not null && !IsBusy;
 
     /// <summary>Loads a previously exported character (JSON), replacing the current one.</summary>
     [RelayCommand]

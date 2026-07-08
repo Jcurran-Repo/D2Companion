@@ -27,10 +27,11 @@ public static class D2Tools
     private static readonly string[] GearQualities =
         Enum.GetNames<GearQuality>().Where(n => n != nameof(GearQuality.Unknown)).ToArray();
 
-    private static readonly JsonSerializerOptions StateJson = new()
+    // Compact on purpose: this JSON rides in the conversation every time Claude checks
+    // state, and each copy stays in history for the rest of the session.
+    private static readonly JsonSerializerOptions CompactJson = new()
     {
-        WriteIndented = true,
-        Converters = { new JsonStringEnumConverter() },
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
     };
 
     // Must be declared BEFORE Definitions: static fields initialize in textual order, and
@@ -164,7 +165,7 @@ public static class D2Tools
         switch (name)
         {
             case "get_character_state":
-                return JsonSerializer.Serialize(service.Current, StateJson);
+                return BuildStateView(service.Current);
 
             case "set_name":
                 service.SetName(Str(input, "name") ?? "", DecisionSource.Claude, why);
@@ -240,6 +241,69 @@ public static class D2Tools
                 return $"Unknown tool '{name}'.";
         }
     }
+
+    /// <summary>
+    /// The state Claude sees: everything current (identity, skills, gear, reminders) in
+    /// full, but the unbounded histories summarized — runs as per-target tallies with the
+    /// last few notable drops, deaths as a count plus the most recent three. Forty Mephisto
+    /// runs are one tally line here instead of forty timestamped records.
+    /// </summary>
+    public static string BuildStateView(Character c)
+    {
+        var view = new
+        {
+            name = c.Name,
+            @class = c.Class.ToString(),
+            mode = c.Mode.ToString(),
+            patchOrSeason = NullIfEmpty(c.PatchOrSeason),
+            buildGoal = NullIfEmpty(c.BuildGoal),
+            difficulty = c.Difficulty.ToString(),
+            act = NullIfEmpty(c.Act),
+            level = c.Level,
+            attributes = new
+            {
+                str = c.Attributes.Strength,
+                dex = c.Attributes.Dexterity,
+                vit = c.Attributes.Vitality,
+                ene = c.Attributes.Energy,
+            },
+            skills = c.Skills.Select(s => new { skill = s.Skill, tree = s.Tree, points = s.Points }),
+            gear = c.Gear.Select(g => new
+            {
+                slot = g.Slot,
+                item = g.Item,
+                quality = g.Quality == GearQuality.Unknown ? null : g.Quality.ToString(),
+                notes = NullIfEmpty(g.Notes),
+            }),
+            reminders = c.Reminders,
+            runs = new
+            {
+                total = c.Runs.Count,
+                byTarget = c.Runs
+                    .GroupBy(r => r.Target, StringComparer.OrdinalIgnoreCase)
+                    .Select(g => new
+                    {
+                        target = g.Key,
+                        runs = g.Count(),
+                        recentDrops = g.Where(r => !string.IsNullOrWhiteSpace(r.Note))
+                            .TakeLast(3).Select(r => r.Note),
+                    }),
+            },
+            deaths = new
+            {
+                total = c.Deaths.Count,
+                recent = c.Deaths.TakeLast(3).Select(d =>
+                {
+                    var where = string.IsNullOrWhiteSpace(d.Act) ? $"{d.Difficulty}" : $"{d.Difficulty}, {d.Act}";
+                    return $"level {d.Level} ({where}): {d.Cause}";
+                }),
+            },
+        };
+        return JsonSerializer.Serialize(view, CompactJson);
+    }
+
+    private static string? NullIfEmpty(string value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
 
     // --- schema helpers --------------------------------------------------
 

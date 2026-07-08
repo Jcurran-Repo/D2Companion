@@ -54,7 +54,10 @@ public static class CharacterExporter
         {
             sb.AppendLine("## Gear");
             foreach (var g in c.Gear)
-                sb.AppendLine($"- **{g.Slot}:** {g.Item}{(string.IsNullOrWhiteSpace(g.Notes) ? "" : $" — {g.Notes}")}");
+            {
+                var quality = g.Quality == GearQuality.Unknown ? "" : $" ({g.Quality})";
+                sb.AppendLine($"- **{g.Slot}:** {g.Item}{quality}{(string.IsNullOrWhiteSpace(g.Notes) ? "" : $" — {g.Notes}")}");
+            }
             sb.AppendLine();
         }
 

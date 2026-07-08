@@ -33,6 +33,9 @@ public sealed class GearItem
 
     /// <summary>Optional notes on why it's equipped or what to look for next.</summary>
     public string Notes { get; set; } = "";
+
+    /// <summary>Item quality when stated; <see cref="GearQuality.Unknown"/> otherwise.</summary>
+    public GearQuality Quality { get; set; } = GearQuality.Unknown;
 }
 
 /// <summary>One completed farming run (a Mephisto run, a Baal run, …).</summary>

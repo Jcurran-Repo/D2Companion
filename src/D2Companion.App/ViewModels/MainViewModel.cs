@@ -60,6 +60,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _newGearSlot = "";
     [ObservableProperty] private string _newGearItem = "";
     [ObservableProperty] private string _newGearNotes = "";
+    [ObservableProperty] private GearQuality _newGearQuality = GearQuality.Unknown;
     [ObservableProperty] private GearItem? _selectedGear;
 
     [ObservableProperty] private string _newReminder = "";
@@ -75,6 +76,7 @@ public partial class MainViewModel : ObservableObject
     public IReadOnlyList<CharacterClass> Classes { get; } = Enum.GetValues<CharacterClass>();
     public IReadOnlyList<GameMode> Modes { get; } = Enum.GetValues<GameMode>();
     public IReadOnlyList<Difficulty> Difficulties { get; } = Enum.GetValues<Difficulty>();
+    public IReadOnlyList<GearQuality> Qualities { get; } = Enum.GetValues<GearQuality>();
 
     public MainViewModel(CharacterService service, D2Brain? brain, VoiceStack? voice, AppConfig config)
     {
@@ -262,7 +264,7 @@ public partial class MainViewModel : ObservableObject
 
     [RelayCommand]
     private void AddOrUpdateGear() =>
-        _service.NoteGear(NewGearSlot, NewGearItem, DecisionSource.Manual, NewGearNotes);
+        _service.NoteGear(NewGearSlot, NewGearItem, DecisionSource.Manual, NewGearNotes, quality: NewGearQuality);
 
     [RelayCommand]
     private void RemoveSelectedGear()

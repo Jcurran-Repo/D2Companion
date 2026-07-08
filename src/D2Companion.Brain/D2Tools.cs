@@ -24,6 +24,9 @@ public static class D2Tools
     private static readonly string[] Difficulties =
         Enum.GetNames<Difficulty>().Where(n => n != nameof(Difficulty.Unset)).ToArray();
 
+    private static readonly string[] GearQualities =
+        Enum.GetNames<GearQuality>().Where(n => n != nameof(GearQuality.Unknown)).ToArray();
+
     private static readonly JsonSerializerOptions StateJson = new()
     {
         WriteIndented = true,
@@ -115,6 +118,7 @@ public static class D2Tools
                 ("slot", StringProp("Slot, e.g. \"Weapon\", \"Helm\", \"Ring 1\".")),
                 ("item", StringProp("Item or runeword name.")),
                 ("notes", StringProp("Optional note on why it's equipped or what to seek next.")),
+                ("quality", EnumProp("Item quality — colors the item like in-game text.", GearQualities)),
             ],
             required: ["slot", "item"]),
 
@@ -198,7 +202,8 @@ public static class D2Tools
 
             case "note_gear":
                 service.NoteGear(Str(input, "slot") ?? "", Str(input, "item") ?? "",
-                    DecisionSource.Claude, Str(input, "notes") ?? "", why);
+                    DecisionSource.Claude, Str(input, "notes") ?? "", why,
+                    ParseEnum<GearQuality>(Str(input, "quality")));
                 return "Recorded.";
 
             case "add_reminder":

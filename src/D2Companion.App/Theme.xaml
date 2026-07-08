@@ -22,6 +22,7 @@
     <SolidColorBrush x:Key="D2.TextBrush"       Color="#D6C9A0"/>
     <SolidColorBrush x:Key="D2.TextDimBrush"    Color="#97865F"/>
     <SolidColorBrush x:Key="D2.TextFaintBrush"  Color="#6E6046"/>
+    <SolidColorBrush x:Key="D2.NormalItemBrush" Color="#E8E8E8"/>
     <SolidColorBrush x:Key="D2.MagicBrush"      Color="#6969FF"/>
     <SolidColorBrush x:Key="D2.RareBrush"       Color="#FFFF64"/>
     <SolidColorBrush x:Key="D2.SetBrush"        Color="#00FF00"/>

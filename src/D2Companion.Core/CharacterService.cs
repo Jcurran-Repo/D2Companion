@@ -175,8 +175,10 @@ public sealed class CharacterService
 
     // --- Gear ------------------------------------------------------------
 
-    /// <summary>Records gear for a slot, replacing whatever was in that slot.</summary>
-    public void NoteGear(string slot, string item, DecisionSource source, string notes = "", string? rationale = null)
+    /// <summary>Records gear for a slot, replacing whatever was in that slot. Passing
+    /// <see cref="GearQuality.Unknown"/> for the same item keeps its recorded quality.</summary>
+    public void NoteGear(string slot, string item, DecisionSource source, string notes = "",
+        string? rationale = null, GearQuality quality = GearQuality.Unknown)
     {
         slot = (slot ?? "").Trim();
         item = (item ?? "").Trim();
@@ -184,16 +186,21 @@ public sealed class CharacterService
         if (slot.Length == 0) return;
 
         var existing = FindGear(slot);
-        if (existing is not null && existing.Item == item && existing.Notes == notes) return;
+        if (quality == GearQuality.Unknown && existing is not null && existing.Item == item)
+            quality = existing.Quality;
+        if (existing is not null && existing.Item == item && existing.Notes == notes && existing.Quality == quality)
+            return;
 
         if (existing is null)
-            Current.Gear.Add(new GearItem { Slot = slot, Item = item, Notes = notes });
+            Current.Gear.Add(new GearItem { Slot = slot, Item = item, Notes = notes, Quality = quality });
         else
         {
             existing.Item = item;
             existing.Notes = notes;
+            existing.Quality = quality;
         }
-        Commit(source, "note_gear", $"{slot}: \"{item}\"", rationale);
+        var qualityTag = quality == GearQuality.Unknown ? "" : $" ({quality})";
+        Commit(source, "note_gear", $"{slot}: \"{item}\"{qualityTag}", rationale);
     }
 
     public void RemoveGear(string slot, DecisionSource source, string? rationale = null)
@@ -336,7 +343,7 @@ public sealed class CharacterService
         target.Skills.Clear();
         target.Skills.AddRange(source.Skills.Select(s => new SkillAllocation { Skill = s.Skill, Tree = s.Tree, Points = s.Points }));
         target.Gear.Clear();
-        target.Gear.AddRange(source.Gear.Select(g => new GearItem { Slot = g.Slot, Item = g.Item, Notes = g.Notes }));
+        target.Gear.AddRange(source.Gear.Select(g => new GearItem { Slot = g.Slot, Item = g.Item, Notes = g.Notes, Quality = g.Quality }));
         target.Reminders.Clear();
         target.Reminders.AddRange(source.Reminders);
         target.Runs.Clear();

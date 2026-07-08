@@ -33,3 +33,20 @@ public enum Difficulty
     Nightmare,
     Hell,
 }
+
+/// <summary>
+/// Item quality tiers, matching the game's item-name colors (magic blue, rare yellow,
+/// set green, unique gold, …). <see cref="Unknown"/> means "not stated" — the UI then
+/// falls back to sniffing the item text via GearQualityDetector.
+/// </summary>
+public enum GearQuality
+{
+    Unknown = 0,
+    Normal,
+    Magic,
+    Rare,
+    Set,
+    Unique,
+    Runeword,
+    Crafted,
+}

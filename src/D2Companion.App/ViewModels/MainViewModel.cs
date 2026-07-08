@@ -310,18 +310,37 @@ public partial class MainViewModel : ObservableObject
     public void BeginTalk()
     {
         if (!VoiceEnabled || IsTalking || IsBusy) return;
-        _voice!.Recorder.Start();
+        try
+        {
+            _voice!.Recorder.Start();
+        }
+        catch (Exception ex)
+        {
+            // Unplugged headset / device claimed elsewhere — report, don't crash mid-game.
+            VoiceStatus = $"Couldn't open the microphone: {ex.Message}";
+            return;
+        }
         IsTalking = true;
         VoiceStatus = "Listening…";
     }
 
     /// <summary>Talk-button released: transcribe, ask Claude, speak the reply. Claude's tool
-    /// calls update the character mid-turn, and the sheet re-syncs via the Changed event.</summary>
+    /// calls update the character mid-turn, and the sheet re-syncs via the Changed event.
+    /// Must never throw — it's awaited from an async void mouse handler.</summary>
     public async Task EndTalkAsync()
     {
         if (!VoiceEnabled || !IsTalking) return;
         IsTalking = false;
-        var wav = await Task.Run(() => _voice!.Recorder.Stop());
+        byte[] wav;
+        try
+        {
+            wav = await Task.Run(() => _voice!.Recorder.Stop());
+        }
+        catch (Exception ex)
+        {
+            VoiceStatus = $"Microphone capture failed: {ex.Message}";
+            return;
+        }
         await RespondToAsync(wav);
     }
 
@@ -338,7 +357,15 @@ public partial class MainViewModel : ObservableObject
 
     private void StartListening()
     {
-        _voice!.OpenMic.Start();
+        try
+        {
+            _voice!.OpenMic.Start();
+        }
+        catch (Exception ex)
+        {
+            VoiceStatus = $"Couldn't open the microphone: {ex.Message}";
+            return;
+        }
         IsListening = true;
         VoiceStatus = "Listening…";
     }
@@ -417,9 +444,10 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task ShareScreenshotAsync()
     {
-        if (Clipboard.ContainsImage())
+        if (!TryReadClipboardImage(out var clipboardImage)) return;
+        if (clipboardImage is not null)
         {
-            await SendScreenshotAsync(Clipboard.GetImage());
+            await SendScreenshotAsync(clipboardImage);
             return;
         }
 
@@ -436,12 +464,30 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task PasteScreenshotAsync()
     {
-        if (!Clipboard.ContainsImage())
+        if (!TryReadClipboardImage(out var image)) return;
+        if (image is null)
         {
             VoiceStatus = "Clipboard has no image — hit PrtScn in game first.";
             return;
         }
-        await SendScreenshotAsync(Clipboard.GetImage());
+        await SendScreenshotAsync(image);
+    }
+
+    /// <summary>Reads the clipboard image if any. The Windows clipboard throws when another
+    /// app briefly holds it locked — returns false (with a status hint) instead of crashing.</summary>
+    private bool TryReadClipboardImage(out BitmapSource? image)
+    {
+        try
+        {
+            image = Clipboard.ContainsImage() ? Clipboard.GetImage() : null;
+            return true;
+        }
+        catch (Exception ex)
+        {
+            image = null;
+            VoiceStatus = $"Couldn't read the clipboard ({ex.Message}) — try again in a second.";
+            return false;
+        }
     }
 
     private async Task SendScreenshotAsync(BitmapSource? image)

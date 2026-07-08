@@ -16,4 +16,9 @@ public sealed class BrainOptions
 
     /// <summary>Reasoning effort: low | medium | high | max. Low keeps voice replies snappy.</summary>
     public string Effort { get; init; } = "low";
+
+    /// <summary>How many recent screenshots stay in conversation history. Older ones are
+    /// replaced with a text placeholder — each retained image costs ~1.8k input tokens on
+    /// EVERY subsequent turn, and Claude only ever acts on the recent ones.</summary>
+    public int MaxRetainedImages { get; init; } = 2;
 }

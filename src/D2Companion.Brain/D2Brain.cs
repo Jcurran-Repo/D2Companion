@@ -67,6 +67,42 @@ public sealed class D2Brain
             Content = BuildImageContent(playerText, imageBytes, imageMediaType),
         });
 
+    /// <summary>
+    /// Runs one tool call, converting any failure into an is_error tool_result instead of
+    /// letting it escape. This invariant matters: Claude's tool_use is already in history,
+    /// and a tool_use without a matching tool_result makes the API reject EVERY subsequent
+    /// request — one flaky clipboard read would otherwise brick the whole conversation.
+    /// </summary>
+    internal async Task<ToolResultBlockParam> RunToolAsync(ToolUseBlock toolUse)
+    {
+        try
+        {
+            // view_screenshot returns image content, not a string — handle it here.
+            if (toolUse.Name == "view_screenshot" && _screenshotSource is not null)
+                return new ToolResultBlockParam { ToolUseID = toolUse.ID, Content = BuildScreenshotResult(_screenshotSource()) };
+
+            // lookup_reference is the one async tool (it fetches web pages); everything
+            // else is a synchronous state mutation through the service.
+            var result = toolUse.Name == "lookup_reference" && _reference is not null
+                ? await _reference.LookupAsync(ReadTopic(toolUse.Input))
+                : D2Tools.Execute(_service, toolUse.Name, toolUse.Input);
+            return new ToolResultBlockParam { ToolUseID = toolUse.ID, Content = result };
+        }
+        catch (Exception ex)
+        {
+            return new ToolResultBlockParam
+            {
+                ToolUseID = toolUse.ID,
+                Content = ToolFailureMessage(toolUse.Name, ex),
+                IsError = true,
+            };
+        }
+    }
+
+    /// <summary>What Claude is told when a tool throws — enough to explain and move on.</summary>
+    public static string ToolFailureMessage(string toolName, Exception ex) =>
+        $"The {toolName} tool failed: {ex.Message}. Tell the player briefly and carry on; they can retry if it matters.";
+
     /// <summary>Builds the tool_result content for view_screenshot: the clipboard image when
     /// there is one, or a nudge to take a screenshot when there isn't. Public for tests.</summary>
     public static ToolResultBlockParamContent BuildScreenshotResult(CapturedImage? capture)
@@ -107,6 +143,7 @@ public sealed class D2Brain
     private async Task<string> RunTurnAsync(MessageParam userMessage)
     {
         _messages.Add(userMessage);
+        ImageTrimmer.Trim(_messages, _options.MaxRetainedImages);
 
         for (var iteration = 0; iteration < _options.MaxToolIterations; iteration++)
         {
@@ -138,25 +175,7 @@ public sealed class D2Brain
             // Run each tool against the service and hand the results back to Claude.
             var toolResults = new List<ContentBlockParam>();
             foreach (var toolUse in toolUses)
-            {
-                // view_screenshot returns image content, not a string — handle it here.
-                if (toolUse.Name == "view_screenshot" && _screenshotSource is not null)
-                {
-                    toolResults.Add(new ToolResultBlockParam
-                    {
-                        ToolUseID = toolUse.ID,
-                        Content = BuildScreenshotResult(_screenshotSource()),
-                    });
-                    continue;
-                }
-
-                // lookup_reference is the one async tool (it fetches web pages); everything
-                // else is a synchronous state mutation through the service.
-                var result = toolUse.Name == "lookup_reference" && _reference is not null
-                    ? await _reference.LookupAsync(ReadTopic(toolUse.Input))
-                    : D2Tools.Execute(_service, toolUse.Name, toolUse.Input);
-                toolResults.Add(new ToolResultBlockParam { ToolUseID = toolUse.ID, Content = result });
-            }
+                toolResults.Add(await RunToolAsync(toolUse));
             _messages.Add(new MessageParam { Role = Role.User, Content = toolResults });
         }
 

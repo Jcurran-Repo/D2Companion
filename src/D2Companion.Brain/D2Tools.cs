@@ -123,6 +123,22 @@ public static class D2Tools
             props: [("text", StringProp("The reminder text."))],
             required: ["text"]),
 
+        Tool("log_run",
+            "Record one completed farming run (a Mephisto run, a Baal run, Pindle, …). Call this " +
+            "each time the player reports finishing a run — you keep their drop tally. The result " +
+            "tells you the running count for that target.",
+            props: [
+                ("target", StringProp("What was farmed, e.g. \"Mephisto\".")),
+                ("drop", StringProp("Notable drop(s), e.g. \"Shako!\". Omit when nothing worth naming.")),
+            ],
+            required: ["target"]),
+
+        Tool("log_death",
+            "Record the character's death and what caused it. Call this whenever the player " +
+            "reports dying. In hardcore a death ends the character — mark the moment properly.",
+            props: [("cause", StringProp("What killed them, e.g. \"Fire Enchanted boss pack in the Pit\"."))],
+            required: ["cause"]),
+
         Tool("lookup_reference",
             "Look up a D2 topic in the configured reference sites to orient or verify a decision. " +
             "Use sparingly — rely on your own knowledge first; only look up when a call should be " +
@@ -187,6 +203,17 @@ public static class D2Tools
 
             case "add_reminder":
                 service.AddReminder(Str(input, "text") ?? "", DecisionSource.Claude, why);
+                return "Recorded.";
+
+            case "log_run":
+            {
+                var target = Str(input, "target") ?? "";
+                var count = service.LogRun(target, DecisionSource.Claude, Str(input, "drop") ?? "", why);
+                return count == 0 ? "Nothing recorded — no target given." : $"Recorded — run #{count} for {target.Trim()}.";
+            }
+
+            case "log_death":
+                service.LogDeath(Str(input, "cause") ?? "", DecisionSource.Claude, why);
                 return "Recorded.";
 
             case "lookup_reference":

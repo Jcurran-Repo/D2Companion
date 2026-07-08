@@ -66,6 +66,29 @@ public static class CharacterExporter
             sb.AppendLine();
         }
 
+        if (c.Runs.Count > 0)
+        {
+            sb.AppendLine("## Farming runs");
+            foreach (var group in c.Runs.GroupBy(r => r.Target, StringComparer.OrdinalIgnoreCase))
+            {
+                sb.AppendLine($"- **{group.Key}:** {group.Count()} run(s)");
+                foreach (var drop in group.Where(r => !string.IsNullOrWhiteSpace(r.Note)))
+                    sb.AppendLine($"  - {drop.Note}");
+            }
+            sb.AppendLine();
+        }
+
+        if (c.Deaths.Count > 0)
+        {
+            sb.AppendLine("## Deaths");
+            foreach (var d in c.Deaths)
+            {
+                var where = string.IsNullOrWhiteSpace(d.Act) ? $"{d.Difficulty}" : $"{d.Difficulty}, {d.Act}";
+                sb.AppendLine($"- `{d.TimestampUtc.ToLocalTime():yyyy-MM-dd HH:mm}` level {d.Level} ({where}) — {d.Cause}");
+            }
+            sb.AppendLine();
+        }
+
         sb.AppendLine("## Decision log");
         // Ledger arrives newest-first; read it oldest-first so it tells the story in order.
         var ordered = ledger.OrderBy(e => e.Id).ToList();

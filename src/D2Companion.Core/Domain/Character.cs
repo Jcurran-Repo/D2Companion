@@ -35,6 +35,31 @@ public sealed class GearItem
     public string Notes { get; set; } = "";
 }
 
+/// <summary>One completed farming run (a Mephisto run, a Baal run, …).</summary>
+public sealed class RunRecord
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    /// <summary>What was being farmed, e.g. "Mephisto". Free text.</summary>
+    public string Target { get; set; } = "";
+
+    /// <summary>Notable drop(s) from the run; empty when it gave nothing worth naming.</summary>
+    public string Note { get; set; } = "";
+}
+
+/// <summary>A death, with enough context snapshot to tell the story later.</summary>
+public sealed class DeathRecord
+{
+    public DateTimeOffset TimestampUtc { get; set; }
+
+    /// <summary>What killed the character, e.g. "Fire Enchanted boss pack in the Pit".</summary>
+    public string Cause { get; set; } = "";
+
+    public int Level { get; set; }
+    public Difficulty Difficulty { get; set; }
+    public string Act { get; set; } = "";
+}
+
 /// <summary>
 /// The complete build state for one character. This is the single source of truth:
 /// because the in-app Claude makes every build decision, tracking is just persisting
@@ -63,4 +88,6 @@ public sealed class Character
     public List<SkillAllocation> Skills { get; set; } = new();
     public List<GearItem> Gear { get; set; } = new();
     public List<string> Reminders { get; set; } = new();
+    public List<RunRecord> Runs { get; set; } = new();
+    public List<DeathRecord> Deaths { get; set; } = new();
 }

@@ -160,6 +160,35 @@
                         </StackPanel>
                     </StackPanel>
                 </GroupBox>
+
+                <GroupBox Header="Farming runs">
+                    <StackPanel>
+                        <ListView Height="90" ItemsSource="{Binding RunSummaries}">
+                            <ListView.View>
+                                <GridView>
+                                    <GridViewColumn Header="Target" Width="110" DisplayMemberBinding="{Binding Target}"/>
+                                    <GridViewColumn Header="Runs" Width="45" DisplayMemberBinding="{Binding Count}"/>
+                                    <GridViewColumn Header="Last find" Width="150" DisplayMemberBinding="{Binding LastDrop}"/>
+                                </GridView>
+                            </ListView.View>
+                        </ListView>
+                        <TextBlock Text="Tell Claude when a run is done — it keeps the tally."
+                                   Foreground="{StaticResource D2.TextFaintBrush}" FontStyle="Italic"
+                                   Margin="0,4,0,0" TextWrapping="Wrap"/>
+                    </StackPanel>
+                </GroupBox>
+
+                <GroupBox Header="Deaths">
+                    <ListBox Height="70" ItemsSource="{Binding Deaths}" HorizontalContentAlignment="Stretch">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock TextWrapping="Wrap">
+                                    <Run Text="{Binding Time, Mode=OneWay}" Foreground="{StaticResource D2.TextFaintBrush}"/><Run Text="  "/><Run Text="{Binding Description, Mode=OneWay}" Foreground="{StaticResource D2.RedBrush}"/>
+                                </TextBlock>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </GroupBox>
             </StackPanel>
         </ScrollViewer>
 

@@ -222,6 +222,42 @@ public sealed class CharacterService
         Commit(source, "remove_reminder", $"Removed reminder: \"{text}\"", rationale);
     }
 
+    // --- Runs & deaths -----------------------------------------------------
+
+    /// <summary>Records one completed farming run and returns the run number for that
+    /// target (1-based, case-insensitive match). Returns 0 when no target was given.</summary>
+    public int LogRun(string target, DecisionSource source, string note = "", string? rationale = null)
+    {
+        target = (target ?? "").Trim();
+        note = (note ?? "").Trim();
+        if (target.Length == 0) return 0;
+
+        Current.Runs.Add(new RunRecord { TimestampUtc = DateTimeOffset.UtcNow, Target = target, Note = note });
+        var count = Current.Runs.Count(r => string.Equals(r.Target, target, StringComparison.OrdinalIgnoreCase));
+        Commit(source, "log_run",
+            $"Run #{count} — {target}{(note.Length == 0 ? "" : $" · {note}")}", rationale);
+        return count;
+    }
+
+    /// <summary>Records a death with a snapshot of where the character stood.</summary>
+    public void LogDeath(string cause, DecisionSource source, string? rationale = null)
+    {
+        cause = (cause ?? "").Trim();
+        if (cause.Length == 0) cause = "unknown cause";
+
+        Current.Deaths.Add(new DeathRecord
+        {
+            TimestampUtc = DateTimeOffset.UtcNow,
+            Cause = cause,
+            Level = Current.Level,
+            Difficulty = Current.Difficulty,
+            Act = Current.Act,
+        });
+        var where = string.IsNullOrWhiteSpace(Current.Act) ? $"{Current.Difficulty}" : $"{Current.Difficulty}, {Current.Act}";
+        Commit(source, "log_death",
+            $"Death #{Current.Deaths.Count} — level {Current.Level} ({where}): {cause}", rationale);
+    }
+
     // --- Lifecycle -------------------------------------------------------
 
     /// <summary>Clears the character and the entire ledger for a fresh run, then logs the
@@ -303,6 +339,17 @@ public sealed class CharacterService
         target.Gear.AddRange(source.Gear.Select(g => new GearItem { Slot = g.Slot, Item = g.Item, Notes = g.Notes }));
         target.Reminders.Clear();
         target.Reminders.AddRange(source.Reminders);
+        target.Runs.Clear();
+        target.Runs.AddRange(source.Runs.Select(r => new RunRecord { TimestampUtc = r.TimestampUtc, Target = r.Target, Note = r.Note }));
+        target.Deaths.Clear();
+        target.Deaths.AddRange(source.Deaths.Select(d => new DeathRecord
+        {
+            TimestampUtc = d.TimestampUtc,
+            Cause = d.Cause,
+            Level = d.Level,
+            Difficulty = d.Difficulty,
+            Act = d.Act,
+        }));
     }
 
     private void ResetCurrent()
@@ -319,6 +366,8 @@ public sealed class CharacterService
         Current.Skills.Clear();
         Current.Gear.Clear();
         Current.Reminders.Clear();
+        Current.Runs.Clear();
+        Current.Deaths.Clear();
     }
 
     // --- Internals -------------------------------------------------------

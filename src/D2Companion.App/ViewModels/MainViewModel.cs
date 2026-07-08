@@ -68,6 +68,8 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<SkillAllocation> Skills { get; } = new();
     public ObservableCollection<GearItem> Gear { get; } = new();
     public ObservableCollection<string> Reminders { get; } = new();
+    public ObservableCollection<RunSummaryRow> RunSummaries { get; } = new();
+    public ObservableCollection<DeathRow> Deaths { get; } = new();
     public ObservableCollection<LedgerRow> Ledger { get; } = new();
 
     public IReadOnlyList<CharacterClass> Classes { get; } = Enum.GetValues<CharacterClass>();
@@ -415,6 +417,10 @@ public partial class MainViewModel : ObservableObject
         Replace(Skills, c.Skills);
         Replace(Gear, c.Gear);
         Replace(Reminders, c.Reminders);
+        Replace(RunSummaries, c.Runs
+            .GroupBy(r => r.Target, StringComparer.OrdinalIgnoreCase)
+            .Select(g => new RunSummaryRow(g.Key, g.ToList())));
+        Replace(Deaths, c.Deaths.Select(d => new DeathRow(d)));
     }
 
     private void RefreshLedger()

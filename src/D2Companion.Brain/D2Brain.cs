@@ -50,9 +50,38 @@ public sealed class D2Brain
     /// Claude may call tools mid-turn to record decisions; each one flows straight into the
     /// character state and the ledger before the reply comes back.
     /// </summary>
-    public async Task<string> SendAsync(string playerText)
+    public Task<string> SendAsync(string playerText) =>
+        RunTurnAsync(new MessageParam { Role = Role.User, Content = playerText });
+
+    /// <summary>
+    /// Sends a screenshot (with accompanying text) as the player's turn — Claude's eyes on
+    /// the game. Same tool loop as a text turn.
+    /// </summary>
+    public Task<string> SendAsync(string playerText, byte[] imageBytes, string imageMediaType) =>
+        RunTurnAsync(new MessageParam
+        {
+            Role = Role.User,
+            Content = BuildImageContent(playerText, imageBytes, imageMediaType),
+        });
+
+    /// <summary>Builds the image-plus-text content for a screenshot turn (image first, per
+    /// the vision guidance). Public so the payload shape stays testable without an API call.</summary>
+    public static List<ContentBlockParam> BuildImageContent(string text, byte[] imageBytes, string mediaType) =>
+    [
+        new ImageBlockParam
+        {
+            Source = new Base64ImageSource
+            {
+                Data = Convert.ToBase64String(imageBytes),
+                MediaType = mediaType,
+            },
+        },
+        new TextBlockParam { Text = text },
+    ];
+
+    private async Task<string> RunTurnAsync(MessageParam userMessage)
     {
-        _messages.Add(new MessageParam { Role = Role.User, Content = playerText });
+        _messages.Add(userMessage);
 
         for (var iteration = 0; iteration < _options.MaxToolIterations; iteration++)
         {

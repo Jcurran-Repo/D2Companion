@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using D2Companion.Brain;
@@ -32,7 +33,7 @@ public partial class MainViewModel : ObservableObject
     // --- Voice / brain status ---
     [ObservableProperty] private string _voiceStatus = "";
     [ObservableProperty] private bool _isTalking;
-    [ObservableProperty] private bool _isBusy;
+    [ObservableProperty][NotifyPropertyChangedFor(nameof(ScreenshotEnabled))] private bool _isBusy;
     [ObservableProperty][NotifyPropertyChangedFor(nameof(ListenButtonText))] private bool _isListening;
     [ObservableProperty] private string _lastHeard = "";
     [ObservableProperty] private string _lastReply = "";
@@ -98,6 +99,9 @@ public partial class MainViewModel : ObservableObject
 
     /// <summary>Voice is available only when both the brain and the voice stack are configured.</summary>
     public bool VoiceEnabled => _brain is not null && _voice is not null;
+
+    /// <summary>Screenshots only need the brain — they work even without ElevenLabs keys.</summary>
+    public bool ScreenshotEnabled => _brain is not null && !IsBusy;
 
     public bool IsPushToTalk => _settings.VoiceMode == VoiceMode.PushToTalk;
     public bool IsOpenMic => _settings.VoiceMode == VoiceMode.OpenMic;
@@ -361,15 +365,88 @@ public partial class MainViewModel : ObservableObject
             var reply = await _brain!.SendAsync(cleaned);
 
             LastReply = reply;
-            VoiceStatus = "Speaking…";
-            var audio = await _voice!.Tts.SynthesizeAsync(reply);
-            await _voice!.Player.PlayMp3Async(audio);
-
-            VoiceStatus = IsListening ? "Listening…" : "Ready — hold to talk again.";
+            await SpeakAsync(reply);
         }
         catch (Exception ex)
         {
             VoiceStatus = $"Voice error: {ex.Message}";
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Speaks a reply when voice is configured; otherwise just settles the status.</summary>
+    private async Task SpeakAsync(string reply)
+    {
+        if (_voice is null)
+        {
+            VoiceStatus = "Ready.";
+            return;
+        }
+        VoiceStatus = "Speaking…";
+        var audio = await _voice.Tts.SynthesizeAsync(reply);
+        await _voice.Player.PlayMp3Async(audio);
+        VoiceStatus = IsListening ? "Listening…"
+            : IsPushToTalk ? "Ready — hold to talk again."
+            : "Ready.";
+    }
+
+    // --- Screenshot as eyes ---
+
+    /// <summary>Shares a screenshot with Claude: the clipboard image when there is one
+    /// (PrtScn → Ctrl+V flow), otherwise a file picker.</summary>
+    [RelayCommand]
+    private async Task ShareScreenshotAsync()
+    {
+        if (Clipboard.ContainsImage())
+        {
+            await SendScreenshotAsync(Clipboard.GetImage());
+            return;
+        }
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Share a screenshot with Claude",
+            Filter = "Images (*.png;*.jpg;*.jpeg;*.bmp)|*.png;*.jpg;*.jpeg;*.bmp",
+        };
+        if (dialog.ShowDialog() != true) return;
+        await SendScreenshotAsync(new BitmapImage(new Uri(dialog.FileName)));
+    }
+
+    /// <summary>Ctrl+V anywhere outside a text box: paste the clipboard screenshot.</summary>
+    [RelayCommand]
+    private async Task PasteScreenshotAsync()
+    {
+        if (!Clipboard.ContainsImage())
+        {
+            VoiceStatus = "Clipboard has no image — hit PrtScn in game first.";
+            return;
+        }
+        await SendScreenshotAsync(Clipboard.GetImage());
+    }
+
+    private async Task SendScreenshotAsync(BitmapSource? image)
+    {
+        if (image is null || _brain is null || IsBusy) return;
+        IsBusy = true;
+        try
+        {
+            VoiceStatus = "Reading your screen…";
+            LastHeard = "(screenshot)";
+            var jpeg = ScreenshotEncoder.ToJpeg(image);
+            var reply = await _brain.SendAsync(
+                "Here's a screenshot of my game — you're seeing through my eyes. " +
+                "Look it over: react, decide, and record anything worth recording.",
+                jpeg, "image/jpeg");
+
+            LastReply = reply;
+            await SpeakAsync(reply);
+        }
+        catch (Exception ex)
+        {
+            VoiceStatus = $"Screenshot error: {ex.Message}";
         }
         finally
         {

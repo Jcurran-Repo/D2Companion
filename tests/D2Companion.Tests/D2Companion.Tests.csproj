@@ -5,6 +5,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <!-- WPF types are needed to test the App's screenshot encoding. -->
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,12 +18,15 @@
 
   <ItemGroup>
     <Using Include="Xunit" />
+    <!-- UseWPF drops the System.IO implicit using (Shapes.Path clash); the tests want it back. -->
+    <Using Include="System.IO" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\D2Companion.Core\D2Companion.Core.csproj" />
     <ProjectReference Include="..\..\src\D2Companion.Voice\D2Companion.Voice.csproj" />
     <ProjectReference Include="..\..\src\D2Companion.Brain\D2Companion.Brain.csproj" />
+    <ProjectReference Include="..\..\src\D2Companion.App\D2Companion.App.csproj" />
   </ItemGroup>
 
 </Project>

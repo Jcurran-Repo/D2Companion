@@ -55,7 +55,8 @@ static async Task RunChatAsync(string apiKey)
     Console.WriteLine("=== D2Companion brain (text chat) ===");
     Console.WriteLine("Type to talk. Commands: 'state' dumps the sheet, 'new' starts a fresh");
     Console.WriteLine("character, 'export' writes JSON+Markdown, 'import <path>' loads a JSON export,");
-    Console.WriteLine("'reset' clears the conversation, 'quit' exits. Character persists between runs.\n");
+    Console.WriteLine("'see <image-path> [message]' shows Claude a screenshot, 'reset' clears the");
+    Console.WriteLine("conversation, 'quit' exits. Character persists between runs.\n");
 
     while (true)
     {
@@ -99,6 +100,26 @@ static async Task RunChatAsync(string apiKey)
             continue;
         }
 
+        if (line.StartsWith("see ", StringComparison.OrdinalIgnoreCase))
+        {
+            var (path, message) = SplitPathAndMessage(line["see ".Length..]);
+            try
+            {
+                var bytes = File.ReadAllBytes(path);
+                var text = message.Length > 0
+                    ? message
+                    : "Here's a screenshot of my game — you're seeing through my eyes. " +
+                      "Look it over: react, decide, and record anything worth recording.";
+                var reply = await brain.SendAsync(text, bytes, MediaTypeFor(path));
+                Console.WriteLine($"claude> {reply}\n");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[see error] {ex.Message}\n");
+            }
+            continue;
+        }
+
         try
         {
             var reply = await brain.SendAsync(line);
@@ -110,6 +131,28 @@ static async Task RunChatAsync(string apiKey)
         }
     }
 }
+
+// Splits `see` input into a path (quoted or up to the first space) and an optional message.
+static (string Path, string Message) SplitPathAndMessage(string input)
+{
+    input = input.Trim();
+    if (input.StartsWith('"'))
+    {
+        var close = input.IndexOf('"', 1);
+        if (close > 0)
+            return (input[1..close], input[(close + 1)..].Trim());
+    }
+    var space = input.IndexOf(' ');
+    return space < 0 ? (input, "") : (input[..space], input[(space + 1)..].Trim());
+}
+
+static string MediaTypeFor(string path) => Path.GetExtension(path).ToLowerInvariant() switch
+{
+    ".jpg" or ".jpeg" => "image/jpeg",
+    ".gif" => "image/gif",
+    ".webp" => "image/webp",
+    _ => "image/png",
+};
 
 static void RunSimulation()
 {

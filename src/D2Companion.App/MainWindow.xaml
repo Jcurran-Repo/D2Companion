@@ -11,6 +11,12 @@
         Background="{StaticResource D2.WindowBgBrush}"
         Foreground="{StaticResource D2.TextBrush}">
 
+    <!-- Ctrl+V shares a clipboard screenshot; text boxes still get their own paste
+         because they handle the key before it bubbles up here. -->
+    <Window.InputBindings>
+        <KeyBinding Modifiers="Ctrl" Key="V" Command="{Binding PasteScreenshotCommand}"/>
+    </Window.InputBindings>
+
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <local:GearQualityBrushConverter x:Key="GearQualityBrush"/>
@@ -250,6 +256,10 @@
                             IsEnabled="{Binding VoiceEnabled}"
                             Visibility="{Binding IsOpenMic, Converter={StaticResource BoolToVis}}"
                             Command="{Binding ToggleListeningCommand}"/>
+                    <Button Content="📷  Share screenshot" HorizontalAlignment="Left" Padding="14,6"
+                            IsEnabled="{Binding ScreenshotEnabled}"
+                            Command="{Binding ShareScreenshotCommand}"
+                            ToolTip="Sends the clipboard image if there is one (PrtScn in game, then Ctrl+V here), otherwise picks a file."/>
                     <TextBlock Text="{Binding VoiceStatus}" Margin="0,8,0,0"
                                Foreground="{StaticResource D2.GoldBrush}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                     <!-- Speaker labels mirror the ledger: you = magic blue, Claude = unique gold -->

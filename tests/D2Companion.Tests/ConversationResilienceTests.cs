@@ -130,6 +130,25 @@ public sealed class ConversationResilienceTests
         Assert.Contains("Recorded", Serialize(result));
     }
 
+    // --- Spoken-reply accumulation --------------------------------------------
+
+    [Fact]
+    public void AppendSpoken_JoinsAcrossIterations_AndSkipsBlanks()
+    {
+        var spoken = new System.Text.StringBuilder();
+
+        // Iteration 1: the decision, said alongside the tool calls.
+        D2Brain.AppendSpoken(spoken, "I'd equip the leather armor — better defense.");
+        D2Brain.AppendSpoken(spoken, null);
+        D2Brain.AppendSpoken(spoken, "   ");
+        // Final iteration: the wrap-up after tool results.
+        D2Brain.AppendSpoken(spoken, "Noted. Keep clearing the Den.");
+
+        Assert.Equal(
+            "I'd equip the leather armor — better defense. Noted. Keep clearing the Den.",
+            spoken.ToString());
+    }
+
     [Fact]
     public void ToolFailureMessage_NamesTheToolAndReason()
     {

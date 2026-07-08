@@ -145,6 +145,12 @@ public sealed class D2Brain
         _messages.Add(userMessage);
         ImageTrimmer.Trim(_messages, _options.MaxRetainedImages);
 
+        // The whole turn's speech, not just the last response's: Claude usually says the
+        // decision ALONGSIDE its tool calls ("I'd equip the leather armor — recording it")
+        // and only wraps up briefly after the results. Returning only the final response
+        // silently swallowed exactly the sentences the player needed to hear.
+        var spoken = new StringBuilder();
+
         for (var iteration = 0; iteration < _options.MaxToolIterations; iteration++)
         {
             var response = await _client.Messages.Create(BuildParams());
@@ -156,7 +162,10 @@ public sealed class D2Brain
             foreach (var block in response.Content)
             {
                 if (block.TryPickText(out TextBlock? text))
+                {
                     assistantContent.Add(new TextBlockParam { Text = text.Text });
+                    AppendSpoken(spoken, text.Text);
+                }
                 else if (block.TryPickThinking(out ThinkingBlock? thinking))
                     assistantContent.Add(new ThinkingBlockParam { Thinking = thinking.Thinking, Signature = thinking.Signature });
                 else if (block.TryPickRedactedThinking(out RedactedThinkingBlock? redacted))
@@ -170,7 +179,7 @@ public sealed class D2Brain
             _messages.Add(new MessageParam { Role = Role.Assistant, Content = assistantContent });
 
             if (response.StopReason != "tool_use")
-                return CollectText(response.Content);
+                return spoken.ToString();
 
             // Run each tool against the service and hand the results back to Claude.
             var toolResults = new List<ContentBlockParam>();
@@ -179,7 +188,17 @@ public sealed class D2Brain
             _messages.Add(new MessageParam { Role = Role.User, Content = toolResults });
         }
 
-        return "(I took too many bookkeeping steps on that one — ask me again.)";
+        return spoken.Length > 0
+            ? spoken.ToString()
+            : "(I took too many bookkeeping steps on that one — ask me again.)";
+    }
+
+    /// <summary>Accumulates one turn's speech across tool-loop iterations. Public for tests.</summary>
+    public static void AppendSpoken(StringBuilder spoken, string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return;
+        if (spoken.Length > 0) spoken.Append(' ');
+        spoken.Append(text.Trim());
     }
 
     internal MessageCreateParams BuildParams() => new()
@@ -207,17 +226,4 @@ public sealed class D2Brain
             ? value.GetString() ?? ""
             : "";
 
-    private static string CollectText(IReadOnlyList<ContentBlock> content)
-    {
-        var builder = new StringBuilder();
-        foreach (var block in content)
-        {
-            if (block.TryPickText(out TextBlock? text) && !string.IsNullOrWhiteSpace(text.Text))
-            {
-                if (builder.Length > 0) builder.Append(' ');
-                builder.Append(text.Text);
-            }
-        }
-        return builder.ToString().Trim();
-    }
 }

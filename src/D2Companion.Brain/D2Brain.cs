@@ -143,6 +143,7 @@ public sealed class D2Brain
     private async Task<string> RunTurnAsync(MessageParam userMessage)
     {
         _messages.Add(userMessage);
+        ConversationTrimmer.Trim(_messages, _options.MaxHistoryMessages);
         ImageTrimmer.Trim(_messages, _options.MaxRetainedImages);
 
         // The whole turn's speech, not just the last response's: Claude usually says the

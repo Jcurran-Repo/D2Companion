@@ -21,4 +21,9 @@ public sealed class BrainOptions
     /// replaced with a text placeholder — each retained image costs ~1.8k input tokens on
     /// EVERY subsequent turn, and Claude only ever acts on the recent ones.</summary>
     public int MaxRetainedImages { get; init; } = 2;
+
+    /// <summary>Conversation-history cap (in messages, ~4 per voice turn). Past it, the
+    /// oldest turns are expired down to half this value — the ledger and character sheet
+    /// are the durable memory, so old chat only carries conversational flow.</summary>
+    public int MaxHistoryMessages { get; init; } = 60;
 }

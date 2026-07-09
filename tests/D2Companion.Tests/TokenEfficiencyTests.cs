@@ -1,3 +1,4 @@
+using System.Text.Json;
 using D2Companion.Brain;
 using D2Companion.Core;
 using D2Companion.Core.Domain;
@@ -70,9 +71,12 @@ public sealed class TokenEfficiencyTests
         var request = brain.BuildParams();
 
         // Top-level auto-cache marks the newest message block, so history re-reads at
-        // ~10% price instead of full reprocessing every turn.
+        // ~10% price instead of full reprocessing every turn. 1h TTL because game sessions
+        // have quiet stretches well past the 5-minute default.
         Assert.NotNull(request.CacheControl);
+        Assert.Contains("\"1h\"", JsonSerializer.Serialize(request.CacheControl));
         Assert.True(request.System!.TryPickTextBlockParams(out var system));
         Assert.NotNull(system![^1].CacheControl);
+        Assert.Contains("\"1h\"", JsonSerializer.Serialize(system[^1].CacheControl));
     }
 }

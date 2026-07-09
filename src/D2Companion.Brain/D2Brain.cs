@@ -225,10 +225,14 @@ public sealed class D2Brain
             // request re-reads the entire prior conversation at ~10% price instead of
             // re-processing it at full rate — without it, turn N pays full price for all N-1
             // earlier turns and the session cost curve goes quadratic.
-            CacheControl = new CacheControlEphemeral(),
+            // 1-hour TTL, not the 5-minute default: this is a game companion — the player
+            // regularly goes quiet for a boss fight or a farming stretch, and every gap past
+            // the TTL forces a full-price re-write of the whole history. 1h writes cost 2×
+            // (vs 1.25×) once per increment but survive the entire session's silences.
+            CacheControl = new CacheControlEphemeral { Ttl = Ttl.Ttl1h },
             System = new List<TextBlockParam>
             {
-                new() { Text = SystemPrompt.Text, CacheControl = new CacheControlEphemeral() },
+                new() { Text = SystemPrompt.Text, CacheControl = new CacheControlEphemeral { Ttl = Ttl.Ttl1h } },
             },
             Tools = _tools,
             Thinking = model.SupportsAdaptiveThinking ? (ThinkingConfigParam)new ThinkingConfigAdaptive() : null,

@@ -179,7 +179,16 @@ public sealed class D2Brain
             _messages.Add(new MessageParam { Role = Role.Assistant, Content = assistantContent });
 
             if (response.StopReason != "tool_use")
-                return spoken.ToString();
+            {
+                // Safety classifiers (notably on Fable 5) can decline with an empty reply;
+                // and a thinking-only response can legitimately carry no text. Either way,
+                // never hand the voice layer an empty string.
+                if (spoken.Length > 0)
+                    return spoken.ToString();
+                return response.StopReason == "refusal"
+                    ? "I can't help with that one — let's get back to the game."
+                    : "Say that again?";
+            }
 
             // Run each tool against the service and hand the results back to Claude.
             var toolResults = new List<ContentBlockParam>();
@@ -201,25 +210,32 @@ public sealed class D2Brain
         spoken.Append(text.Trim());
     }
 
-    internal MessageCreateParams BuildParams() => new()
+    internal MessageCreateParams BuildParams()
     {
-        Model = _options.Model,
-        MaxTokens = _options.MaxTokens,
-        // Two cache breakpoints. The system one pins tools + system prompt (stable for the
-        // whole session). The top-level one auto-places on the newest message block, so each
-        // request re-reads the entire prior conversation at ~10% price instead of
-        // re-processing it at full rate — without it, turn N pays full price for all N-1
-        // earlier turns and the session cost curve goes quadratic.
-        CacheControl = new CacheControlEphemeral(),
-        System = new List<TextBlockParam>
+        // Request shape follows the selected model's capabilities: Haiku 4.5 rejects both
+        // the effort parameter and adaptive thinking with a 400, so those are omitted there.
+        var model = ModelCatalog.ById(_options.Model);
+
+        return new MessageCreateParams
         {
-            new() { Text = SystemPrompt.Text, CacheControl = new CacheControlEphemeral() },
-        },
-        Tools = _tools,
-        Thinking = new ThinkingConfigAdaptive(),
-        OutputConfig = new OutputConfig { Effort = _effort },
-        Messages = _messages,
-    };
+            Model = _options.Model,
+            MaxTokens = _options.MaxTokens,
+            // Two cache breakpoints. The system one pins tools + system prompt (stable for the
+            // whole session). The top-level one auto-places on the newest message block, so each
+            // request re-reads the entire prior conversation at ~10% price instead of
+            // re-processing it at full rate — without it, turn N pays full price for all N-1
+            // earlier turns and the session cost curve goes quadratic.
+            CacheControl = new CacheControlEphemeral(),
+            System = new List<TextBlockParam>
+            {
+                new() { Text = SystemPrompt.Text, CacheControl = new CacheControlEphemeral() },
+            },
+            Tools = _tools,
+            Thinking = model.SupportsAdaptiveThinking ? (ThinkingConfigParam)new ThinkingConfigAdaptive() : null,
+            OutputConfig = model.SupportsEffort ? new OutputConfig { Effort = _effort } : null,
+            Messages = _messages,
+        };
+    }
 
     private static string ReadTopic(IReadOnlyDictionary<string, JsonElement> input) =>
         input.TryGetValue("topic", out var value) && value.ValueKind == JsonValueKind.String

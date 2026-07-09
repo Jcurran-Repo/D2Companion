@@ -28,8 +28,28 @@
 
         <ScrollViewer VerticalScrollBarVisibility="Auto">
             <StackPanel>
+                <TextBlock Text="Claude model" FontWeight="SemiBold" FontSize="14"
+                           Foreground="{StaticResource D2.GoldBrush}" Margin="0,0,0,4"/>
+                <TextBlock Text="All options read screenshots well. Filled dots = relative cost per token. Applies after restart."
+                           Foreground="{StaticResource D2.TextDimBrush}" TextWrapping="Wrap" Margin="0,0,0,6"/>
+                <ComboBox ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Margin="0,2">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" Width="90"/>
+                                    <TextBlock Text="{Binding Dots}" Foreground="{StaticResource D2.GoldBrush}" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding Price}" Foreground="{StaticResource D2.TextDimBrush}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding Blurb}" Foreground="{StaticResource D2.TextDimBrush}"
+                                           FontSize="11" TextWrapping="Wrap" Margin="0,1,0,0"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+
                 <TextBlock Text="Voice" FontWeight="SemiBold" FontSize="14"
-                           Foreground="{StaticResource D2.GoldBrush}" Margin="0,0,0,6"/>
+                           Foreground="{StaticResource D2.GoldBrush}" Margin="0,14,0,6"/>
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>

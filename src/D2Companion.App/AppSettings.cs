@@ -13,6 +13,7 @@ public sealed class AppSettings
     public int MinSpeechMs { get; set; } = 350;
 
     // Brain / voice.
+    public string Model { get; set; } = "claude-opus-4-8";
     public string TtsModel { get; set; } = "eleven_turbo_v2_5";
     public string Effort { get; set; } = "low";
 

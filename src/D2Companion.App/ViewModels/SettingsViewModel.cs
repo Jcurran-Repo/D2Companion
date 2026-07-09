@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using D2Companion.Brain;
 using D2Companion.Brain.Reference;
 using D2Companion.Voice;
 
@@ -24,6 +25,7 @@ public partial class SettingsViewModel : ObservableObject
     private readonly string _settingsPath;
     private readonly string _referencePath;
 
+    [ObservableProperty] private ModelChoice _selectedModel = ModelCatalog.ById(ModelCatalog.DefaultId);
     [ObservableProperty] private VoiceMode _selectedMode;
     [ObservableProperty] private double _silenceThreshold;
     [ObservableProperty] private int _endpointSilenceMs;
@@ -33,6 +35,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private int _maxReferenceChars;
 
     public ObservableCollection<SiteRow> Sites { get; } = new();
+    public IReadOnlyList<ModelChoice> Models { get; } = ModelCatalog.All;
     public IReadOnlyList<VoiceMode> Modes { get; } = Enum.GetValues<VoiceMode>();
     public IReadOnlyList<string> Efforts { get; } = new[] { "low", "medium", "high" };
 
@@ -63,6 +66,7 @@ public partial class SettingsViewModel : ObservableObject
         _settingsPath = settingsPath;
         _referencePath = referencePath;
 
+        SelectedModel = ModelCatalog.ById(settings.Model);
         SelectedMode = settings.VoiceMode;
         SilenceThreshold = settings.SilenceThreshold;
         EndpointSilenceMs = settings.EndpointSilenceMs;
@@ -227,6 +231,7 @@ public partial class SettingsViewModel : ObservableObject
 
     public void Save()
     {
+        _settings.Model = SelectedModel.Id;
         _settings.VoiceMode = SelectedMode;
         _settings.SilenceThreshold = SilenceThreshold;
         _settings.EndpointSilenceMs = EndpointSilenceMs;

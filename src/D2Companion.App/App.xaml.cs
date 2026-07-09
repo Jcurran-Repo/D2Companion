@@ -109,8 +109,13 @@ public partial class App : Application
 
         // Editable seed-site list (created with defaults on first run).
         var reference = new ReferenceLibrary(ReferenceConfig.LoadOrCreate(referencePath));
-        return new D2Brain(service, new BrainOptions { ApiKey = apiKey, Effort = settings.Effort }, reference,
-            CaptureClipboardImage);
+        var options = new BrainOptions
+        {
+            ApiKey = apiKey,
+            Model = ModelCatalog.ById(settings.Model).Id,
+            Effort = settings.Effort,
+        };
+        return new D2Brain(service, options, reference, CaptureClipboardImage);
     }
 
     /// <summary>Claude's on-demand eyes (the view_screenshot tool): the clipboard image,
